@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Premier Engagement Simulator · synthetic demo for Hevo TAM</title>
+<style>
+:root{--bg:#f3f4fa;--card:#fff;--ink:#12152f;--mut:#667;--line:#e1e3ef;--pri:#4b4de0;--g:#13a06a;--a:#e39b0b;--r:#d3404e;--soft:#eef0ff}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1022;--card:#171a33;--ink:#eceefc;--mut:#9ba1c6;--line:#2a2e50;--pri:#9395ff;--soft:#20244a}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-variant-numeric:tabular-nums}
+header{background:#12152f;color:#fff;padding:16px 24px}header h1{margin:0;font:600 21px Georgia,serif}header p{margin:2px 0 0;color:#b9bdf0;font-size:13px}
+.ban{background:#fff6dc;color:#5a4300;padding:6px 24px;font-size:12px;border-bottom:1px solid #f0dca0}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+nav{display:flex;gap:4px;flex-wrap:wrap}nav button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+nav button.on,.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn:focus-visible,nav button:focus-visible,tr:focus-visible{outline:2px solid var(--pri)}
+.sp{flex:1}main{padding:20px 24px;max-width:1280px;margin:auto}h2{font:600 18px Georgia,serif;margin:0 0 4px}h3{font-size:14px;margin:14px 0 6px}
+.sub{color:var(--mut);margin:0 0 12px;max-width:80ch}.row{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}.kpi b{display:block;font:600 24px Georgia,serif}.kpi span{color:var(--mut);font-size:12px}
+.two{display:grid;gap:14px;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}@media(max-width:900px){.two{grid-template-columns:1fr}}
+.cmp{display:grid;gap:14px;grid-template-columns:1fr 1fr}@media(max-width:700px){.cmp{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--mut);font-weight:500;border-bottom:1px solid var(--line);padding:5px 6px}td{padding:5px 6px;border-bottom:1px solid var(--line)}
+tr.cl{cursor:pointer}tr.cl:hover,tr.sel{background:var(--soft)}.wrap{overflow-x:auto}
+.pill{padding:1px 8px;border-radius:10px;font-size:12px;color:#fff;white-space:nowrap}.pill.Green{background:var(--g)}.pill.Amber{background:var(--a)}.pill.Red{background:var(--r)}
+.chip{display:inline-block;background:var(--soft);border-radius:4px;padding:0 6px;margin:1px;font-size:11px}.mut{color:var(--mut)}.neg{color:var(--r)}.pos{color:var(--g)}
+.meter{height:8px;background:var(--line);border-radius:4px;overflow:hidden}.meter i{display:block;height:100%;background:var(--pri)}
+textarea{width:100%;min-height:170px;font:12px/1.5 ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
+input,select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--card);color:var(--ink);width:80px}select{width:auto}
+.note{border-left:3px solid var(--a);padding:6px 10px;background:var(--card);margin:10px 0;font-size:13px}.grid3{display:grid;gap:8px 14px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+footer{padding:20px 24px;color:var(--mut);font-size:12px;max-width:1280px;margin:auto}
+</style></head><body>
+<header><h1>Premier Engagement Simulator</h1><p>How a TAM function turns signals into coverage, playbooks and retention · illustrative model for Hevo Data</p></header>
+<div class="ban"><b>All data is synthetic.</b> 280 fictional accounts generated from a fixed seed. Outcomes show a mechanism under stated assumptions, not proven results.</div>
+<div class="bar"><nav id="nav"></nav><span class="sp"></span>
+<label>Mode <select id="mode"><option value="re">Reactive</option><option value="pro" selected>Proactive</option></select></label>
+<label>Week <input type="range" id="wk" min="0" max="12" value="0" style="width:120px"> <b id="wkl">0</b></label>
+<button class="btn" id="play">Play</button></div>
+<main id="view"></main>
+<footer id="foot"></footer>
+<script>
+/* ===================== ENGINE (pure functions, seeded, unit-tested) ===================== */
+const E=(()=>{
+const C={seed:42,green:70,amber:50,team:12,
+ w:{Enterprise:{pipe:.30,usage:.25,adopt:.10,supp:.15,eng:.10,sent:.10},MidMarket:{pipe:.25,usage:.25,adopt:.15,supp:.15,eng:.10,sent:.10},Growth:{pipe:.20,usage:.30,adopt:.25,supp:.10,eng:.05,sent:.10}},
+ cov:{Enterprise:{per:8,tpm:5,rule:'Named TAM',cad:'Weekly pipeline check, monthly exec touch, quarterly QBR'},MidMarket:{per:20,tpm:2.5,rule:'Named TAM (shared book)',cad:'Bi-weekly check-in, quarterly business review'},Growth:{per:60,tpm:.5,rule:'Pooled, signal-triggered',cad:'Monthly digital touch, human outreach on signal'}},
+ tpmCap:40,
+ A:{pReact:.15,pLate:.08,pPro:.45,churnBad:.55,churnBase:.03,xRe:.05,xPro:.15,apw:6}};
+const L={pipe:'Pipeline reliability',usage:'Usage vs baseline',adopt:'Adoption',supp:'Support load',eng:'Engagement',sent:'Sentiment'};
+const SEG={Enterprise:'Enterprise',MidMarket:'Mid-market',Growth:'Growth'};
+const clamp=(x,a=0,b=100)=>Math.max(a,Math.min(b,x));
+const pc=x=>(x>=1?'+':'')+Math.round((x-1)*100)+'%';
+const rng=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const D0=Date.UTC(2026,10,2);
+const dueDate=(w,sla)=>new Date(D0+(7*w+sla)*864e5).toLocaleDateString('en-GB',{day:'2-digit',month:'short',timeZone:'UTC'});
+const ownerOf=a=>'TAM-'+String(a.i%C.team+1).padStart(2,'0');
+const T={pipe:g=>`${(g.fail*100).toFixed(1)}% failed runs, p95 latency ${Math.round(g.lat)}ms, ${g.schema} schema-change break(s)`,
+ usage:g=>`volume ${pc(g.u30)} vs 30-day and ${pc(g.u90)} vs 90-day baseline`,adopt:g=>`only ${g.adopt} sources/destinations added in 90 days`,
+ supp:g=>`${g.tix} open tickets, ${g.esc} escalation(s)`,eng:g=>`${g.touch} days since last touchpoint${g.champ?', champion changed':''}`,sent:g=>`CSAT ${g.csat.toFixed(1)}/5`};
+
+function gen(seed=C.seed){const r=rng(seed),P=['Nimbus','Orbit','Vertex','Lumen','Quanta','Cobalt','Atlas','Zenith','Helio','Pixel','Kestrel','Marlin','Tessera','Aurum','Bluefin','Cedar'],S=['Commerce','Pay','Health','Labs','Cloud','Retail','Bank','Medical','Systems','Works','Logic','Stack'],I=['E-commerce','Fintech','Medtech','B2B software'];
+ const out=[],used=new Set();let i=0;
+ for(const[seg,n]of[['Enterprise',45],['MidMarket',95],['Growth',140]])for(let k=0;k<n;k++,i++){
+  let nm=P[i%16]+' '+S[(i*5+(i/16|0))%12];while(used.has(nm))nm+=' II';used.add(nm);
+  const arr=Math.round((seg==='Enterprise'?250e3+r()*650e3:seg==='MidMarket'?60e3+r()*140e3:12e3+r()*38e3)/1e3)*1e3;
+  const trouble=r()<.26,b={fail:.002+r()*.02+(r()<.1?.04:0),lat:200+r()*400,schema:r()<.15?1:0,u30:.9+r()*.25,u90:.9+r()*.2,adopt:Math.round(r()*6),tix:Math.floor(r()*3),esc:r()<.04?1:0,touch:Math.floor(5+r()*50),csat:3.4+r()*1.5,champ:r()<.05?1:0};
+  const t=trouble?{type:r()<.5?'pipeline':'usage',onset:Math.floor(r()*6)-1,sev:.6+r()*.4}:null;
+  const renew=trouble?15+Math.floor(r()*75):10+Math.floor(r()*355),age=r()<.08?Math.floor(20+r()*60):Math.floor(120+r()*1000);
+  out.push({i,name:nm,seg,ind:I[Math.floor(r()*4)],arr,renew,age,b,t,u:[r(),r(),r(),r(),r()],
+   plan:`${Math.round(arr/12/1200)}M events/mo commit, overage ${seg==='Enterprise'?'$0.9k':'$1.3k'}/M`});}
+ return out}
+
+function sig(a,w,s){const b=a.b,t=a.t;let f=0;
+ if(t&&w>=t.onset){f=Math.min(1,(w-t.onset+1)/6)*t.sev;if(s.res!=null&&w>=s.res)f*=Math.max(0,1-(w-s.res)/3)}
+ const p=t&&t.type==='pipeline',u=t&&t.type==='usage';
+ return{f,fail:b.fail+(p?f*.25:f*.02),lat:b.lat*(1+f*(p?2:.2)),schema:b.schema+(p?Math.round(f*4):0),u30:Math.max(.1,b.u30-f*(u?.55:.2)),u90:Math.max(.1,b.u90-f*.3),adopt:b.adopt,
+  tix:b.tix+(p?Math.round(f*5):0),esc:b.esc+(p&&f>.55?1:0),touch:Math.min(120,s.tw!=null?7*(w-s.tw):b.touch+7*w),csat:Math.max(1,b.csat-f*1.2),champ:b.champ||(u&&f>.5?1:0)}}
+
+function score(a,g){const W=C.w[a.seg];
+ const c={pipe:100-Math.min(60,g.fail*300)-Math.min(20,Math.max(0,g.lat-400)/25)-Math.min(20,g.schema*6),usage:100-Math.max(0,1-g.u30)*150-Math.max(0,1-g.u90)*60,
+  adopt:Math.min(100,g.adopt*20),supp:100-g.tix*8-g.esc*25,eng:100-Math.max(0,g.touch-30)*1.2-g.champ*25,sent:g.csat/5*100};
+ let s=0,minor=0;const rs=[];
+ for(const k in c){c[k]=clamp(c[k]);s+=W[k]*c[k];const loss=W[k]*(100-c[k]);if(c[k]<75)rs.push({k,label:L[k],loss,txt:T[k](g),c:c[k]});else minor+=loss}
+ rs.sort((x,y)=>y.loss-x.loss);
+ return{score:s,band:s>=C.green?'Green':s>=C.amber?'Amber':'Red',rs,minor,c}}
+
+function playbooks(a,g,sc,dtr,w){const o=[],add=(pb,sla,why)=>o.push({pb,sla,why,owner:ownerOf(a),due:dueDate(w,sla)});
+ if(a.age<90&&g.adopt<3)add('Onboarding & time-to-value',7,`Account is ${a.age} days old with ${g.adopt} sources/destinations live`);
+ if(g.u30<.8)add('Usage drop',5,`Volume ${pc(g.u30)} vs 30-day baseline`);
+ if(g.fail>.05||g.schema>=2||g.lat>900)add('Pipeline instability',3,`${(g.fail*100).toFixed(1)}% failed runs, ${g.schema} schema breaks, p95 ${Math.round(g.lat)}ms`);
+ if(dtr<=120&&dtr>0&&sc<C.green)add(`Renewal readiness (T-${dtr<=60?60:dtr<=90?90:120})`,7,`Renews in ${dtr} days with health ${Math.round(sc)}`);
+ if(g.esc>0||(sc<40&&a.seg==='Enterprise')||(g.champ&&sc<C.amber))add('Executive escalation',2,g.esc?'Open escalation on record':g.champ?'Champion changed on a weak account':'Enterprise account with health below 40');
+ if(sc>=80&&g.adopt>=4&&g.u30>1.05)add('Expansion',14,`Healthy, ${g.adopt} recent adds, usage ${pc(g.u30)}`);
+ return o}
+
+const ACT=/Pipeline|Usage|Executive|Renewal/;
+function sim(mode,A,acc){const st=acc.map(()=>({res:null,tw:null,first:null,att:0,last:-9,tk:null}));
+ const hist=[],acts=[],ser=[],demand=[];let touches=0;const cap=C.team*A.apw;
+ for(let w=0;w<=12;w++){
+  const rows=acc.map((a,i)=>{const g=sig(a,w,st[i]),sc=score(a,g);return{a,g,sc,pb:playbooks(a,g,sc.score,a.renew-7*w,w)}});
+  hist.push(rows);demand.push(rows.filter(r=>r.pb.some(p=>p.pb!=='Expansion')).length);const ac=[];
+  if(w<12){
+   if(mode==='re')rows.forEach((r,i)=>{const s=st[i],a=r.a,dtr=a.renew-7*w;
+    if(r.g.tix>=3&&s.tk==null){s.tk=w;s.first??=w;s.tw=w;touches++;ac.push({i,pb:'Ticket response',why:`${r.g.tix} open tickets`,owner:ownerOf(a),due:dueDate(w,1)});if(a.t&&a.u[0]<A.pReact)s.res=w}
+    else if(dtr<=14&&dtr>0&&r.sc.score<C.amber&&s.first==null){s.first=w;s.tw=w;touches++;ac.push({i,pb:'Last-minute renewal save',why:`Renews in ${dtr} days, health ${Math.round(r.sc.score)}`,owner:ownerOf(a),due:dueDate(w,2)});if(a.t&&a.u[1]<A.pLate)s.res=w}});
+   else rows.map((r,i)=>({r,i})).filter(({r,i})=>{const s=st[i];return s.res==null&&s.att<3&&w-s.last>=3&&(r.sc.score<C.amber||r.pb.some(p=>ACT.test(p.pb)))})
+    .sort((x,y)=>y.r.a.arr*(100-y.r.sc.score)-x.r.a.arr*(100-x.r.sc.score)).slice(0,cap).forEach(({r,i})=>{const s=st[i],a=r.a,p=r.pb.find(p=>ACT.test(p.pb))||r.pb[0];
+     s.att++;s.last=w;s.tw=w;s.first??=w;touches++;ac.push({i,pb:p?p.pb:'Health review',why:p?p.why:`Health ${Math.round(r.sc.score)}`,owner:ownerOf(a),due:dueDate(w,p?p.sla:5)});if(a.t&&a.u[s.att-1]<A.pPro)s.res=w})}
+  acts.push(ac);
+  ser.push({w,atRisk:rows.reduce((t,r)=>t+(r.sc.score<C.amber?r.a.arr:0),0),blind:rows.reduce((t,r,i)=>t+(r.sc.score<C.amber&&st[i].first==null?r.a.arr:0),0),touch:touches,esc:rows.filter(r=>r.g.esc>0).length})}
+ let coh=0,ch=0,ex=0,cn=0,tr=0,tc=0,lead=0,rv=0,rvc=0;
+ acc.forEach((a,i)=>{if(a.renew>84)return;const s=st[i],wr=Math.ceil(a.renew/7);coh+=a.arr;rv++;if(s.first!=null&&s.first<wr)rvc++;
+  const unres=a.t&&(s.res==null||s.res>wr),p=unres?A.churnBad:a.t?A.churnBase*1.5:A.churnBase;
+  if(a.u[3]<p){ch+=a.arr;cn++}else if(!a.t&&a.b.adopt>=3&&a.u[4]<(mode==='pro'?A.xPro:A.xRe))ex+=a.arr*.15;
+  if(a.t){tr++;if(s.first!=null&&s.first<wr){tc++;lead+=wr-s.first}}});
+ return{hist,acts,ser,demand,st,res:{coh,ch,ex,cn,grr:1-ch/coh,nrr:1-(ch-ex)/coh,lead:tc?lead/tc:0,cov:tr?tc/tr:0,rvcov:rv?rvc/rv:0,touches,cap}}}
+
+function draft(kind,r,w){const a=r.a,g=r.g,top=r.sc.rs.slice(0,3).map(x=>x.txt).join('; ')||'no material risk signals',dtr=a.renew-7*w,hd='DRAFT from structured signals. Human review and approval required before sending.\n\n';
+ if(kind==='qbr')return hd+`QBR brief: ${a.name} (${SEG[a.seg]}, ${a.ind})\nARR $${a.arr.toLocaleString()} | renews in ${dtr} days | health ${Math.round(r.sc.score)} (${r.sc.band}) | plan: ${a.plan}\n\n1. Value: ${g.adopt} sources/destinations added in 90 days; volume ${pc(g.u30)} vs 30-day baseline.\n2. Reliability: ${T.pipe(g)}.\n3. Risks: ${top}.\n4. Asks for the room: confirm owner of pipeline health, agree success plan for the next quarter${dtr<=120?', start renewal readiness review':''}.`;
+ if(kind==='out')return hd+`Subject: Keeping your Hevo pipelines healthy\n\nHi team at ${a.name},\n\nOur monitoring shows ${top}. We have already started a review and would like 20 minutes this week to walk through what we found and the fix plan.${g.schema?' This includes the recent schema change on your source.':''}\n\nBest,\n${ownerOf(a)}`;
+ return hd+`RCA summary: ${a.name}\nImpact: ${g.fail>.05?'elevated pipeline failures':'no major failure spike'}; volume ${pc(g.u30)} vs 30-day baseline.\nEvidence: ${T.pipe(g)}; ${T.supp(g)}.\nLikely cause (to confirm by engineering): ${g.schema>=2?'repeated upstream schema changes breaking mappings':g.lat>900?'destination or network latency':'not enough signal to attribute'}.\nNext steps: confirm cause, agree fix, set owner and date.`}
+
+function tests(){const R=[],t=(n,f)=>{let ok=false;try{ok=!!f()}catch(e){}R.push([n,ok])};
+ const a=gen(),a2=gen(),A0={...C.A};
+ t('Seeded generator is reproducible',()=>JSON.stringify(a.slice(0,5))===JSON.stringify(a2.slice(0,5)));
+ t('280 accounts: 45 / 95 / 140 by tier',()=>a.length===280&&a.filter(x=>x.seg==='Enterprise').length===45&&a.filter(x=>x.seg==='Growth').length===140);
+ t('Names are unique',()=>new Set(a.map(x=>x.name)).size===280);
+ t('Weights sum to 1 in every tier',()=>Object.values(C.w).every(w=>Math.abs(Object.values(w).reduce((s,x)=>s+x,0)-1)<1e-9));
+ t('Scores stay within 0-100',()=>a.every(x=>{const s=score(x,sig(x,0,{res:null,tw:null})).score;return s>=0&&s<=100}));
+ t('Reasons plus minor losses explain the full score gap',()=>a.slice(0,60).every(x=>{const r=score(x,sig(x,6,{res:null,tw:null}));return Math.abs(r.rs.reduce((s,y)=>s+y.loss,0)+r.minor-(100-r.score))<1e-6}));
+ t('Thresholds are configurable',()=>{const x=a[0],s=score(x,sig(x,0,{res:null,tw:null})).score,old=C.green;C.green=s+1;const b=score(x,sig(x,0,{res:null,tw:null})).band;C.green=old;return b!=='Green'});
+ t('Renewal playbook fires at 120/90/60 days',()=>{const x=a[0],g=sig(x,0,{}),n=d=>playbooks(x,g,50,d,0).find(p=>/Renewal/.test(p.pb))?.pb;return n(110)==='Renewal readiness (T-120)'&&n(80)==='Renewal readiness (T-90)'&&n(40)==='Renewal readiness (T-60)'&&!n(200)});
+ t('Playbooks carry owner and due date',()=>{const p=playbooks(a[0],{...sig(a[0],0,{}),esc:1},60,300,0)[0];return p&&p.owner&&p.due});
+ t('Zero intervention success makes modes identical (mechanism check)',()=>{const z={...A0,pReact:0,pLate:0,pPro:0,xRe:0,xPro:0},r=sim('re',z,a).res,p=sim('pro',z,a).res;return Math.abs(r.grr-p.grr)<1e-9});
+ t('Higher proactive success cannot lower retention',()=>sim('pro',{...A0,pPro:.9},a).res.grr>=sim('pro',{...A0,pPro:0},a).res.grr);
+ t('Simulation is deterministic',()=>sim('pro',A0,a).res.grr===sim('pro',A0,a).res.grr);
+ t('TAM requirement uses ceiling of accounts per TAM',()=>Math.ceil(45/C.cov.Enterprise.per)===6&&Math.ceil(95/C.cov.MidMarket.per)===5);
+ return R}
+return{C,L,SEG,gen,sig,score,playbooks,sim,draft,tests,ownerOf,acc:gen(),pc,dueDate}})();
+if(typeof module!=='undefined')module.exports=E;
+
+/* ===================== UI ===================== */
+if(typeof document!=='undefined')(()=>{
+const C=E.C,$=s=>document.getElementById(s),S={tab:'port',mode:'pro',w:0,sel:null,seg:'All',dr:null,timer:null};
+const M=x=>x>=1e6?'$'+(x/1e6).toFixed(2)+'M':'$'+Math.round(x/1e3)+'K',P=x=>Math.round(x*100)+'%',acc=E.acc;
+let RE,PR,SENS;
+const TABS=[['port','1 Portfolio'],['health','2 Health & signals'],['ops','3 Operating review'],['sim','4 Impact simulation']];
+function run(){const A=C.A,v=o=>({...A,...o}),s=(m,o)=>E.sim(m,o,acc).res;RE=E.sim('re',A,acc);PR=E.sim('pro',A,acc);
+ SENS=[['Conservative',s('re',v({pReact:A.pReact*1.5,pLate:A.pLate*1.5})),s('pro',v({pPro:A.pPro*.65,xPro:A.xPro*.6}))],['Base',RE.res,PR.res],['Optimistic',s('re',v({pReact:A.pReact*.7})),s('pro',v({pPro:Math.min(.95,A.pPro*1.35)}))]]}
+const cur=()=>S.mode==='re'?RE:PR,rowsNow=()=>cur().hist[S.w];
+const pill=b=>`<span class="pill ${b}">${b}</span>`;
+const kpi=(v,l)=>`<div class="card kpi"><b>${v}</b><span>${l}</span></div>`;
+const meter=(p)=>`<div class="meter"><i style="width:${clamp(p)}%"></i></div>`;
+const clamp=(x,a=0,b=100)=>Math.max(a,Math.min(b,x));
+
+function vPort(){const segs=Object.keys(C.cov),by=s=>acc.filter(a=>a.seg===s);let need=0,tp=0;
+ const rows=segs.map(s=>{const l=by(s),n=Math.ceil(l.length/C.cov[s].per);need+=n;tp+=l.length*C.cov[s].tpm;return`<tr><td><b>${E.SEG[s]}</b></td><td>${l.length}</td><td>${M(l.reduce((t,a)=>t+a.arr,0))}</td><td>${C.cov[s].rule}</td><td>${C.cov[s].cad}</td><td>1:${C.cov[s].per}</td><td>${n}</td></tr>`}).join('');
+ const gap=C.team-need,supply=C.team*C.tpmCap,ind=['E-commerce','Fintech','Medtech','B2B software'].map(i=>`${i}: ${acc.filter(a=>a.ind===i).length}`).join(' · ');
+ return`<h2>Portfolio and segmentation</h2><p class="sub">Tier decides coverage model and cadence. Coverage ratios are inputs you can challenge. Industry mix: ${ind}.</p>
+ <div class="row">${kpi(acc.length,'accounts')}${kpi(M(acc.reduce((t,a)=>t+a.arr,0)),'ARR in scope')}${kpi(M(acc.filter(a=>a.renew<=90).reduce((t,a)=>t+a.arr,0)),'ARR renewing in 90 days')}${kpi(need+' TAMs','required by coverage rules')}</div>
+ <div class="card wrap"><table><tr><th>Tier</th><th>Accounts</th><th>ARR</th><th>Coverage rule</th><th>Touchpoint cadence</th><th>Ratio</th><th>TAMs needed</th></tr>${rows}</table></div>
+ <h3>Capacity calculator</h3><div class="card"><label>TAMs on team <input type="number" min="1" max="40" value="${C.team}" onchange="U.team(this.value)"></label>
+ <p>Named coverage needs <b>${need}</b> TAMs. You have <b>${C.team}</b>: <b class="${gap<0?'neg':'pos'}">${gap<0?`short by ${-gap}`:`${gap} spare`}</b>.</p>
+ <p>Planned touchpoints: <b>${Math.round(tp)}</b> per month versus capacity of <b>${supply}</b> (${C.tpmCap} per TAM). Utilisation ${P(tp/supply)}.</p>${meter(tp/supply*100)}
+ <p class="mut">Try 14 for a full-coverage team, or 8 to see which tier loses named coverage first.</p></div>`}
+
+function vHealth(){const R=rowsNow(),w=S.w;let list=R.map((r,i)=>({r,i})).filter(x=>S.seg==='All'||x.r.a.seg===S.seg).sort((x,y)=>x.r.sc.score-y.r.sc.score);
+ if(S.sel==null)S.sel=list[0].i;const cnt=b=>R.filter(r=>r.sc.band===b).length;
+ const body=list.slice(0,40).map(({r,i})=>`<tr class="cl ${i===S.sel?'sel':''}" tabindex="0" onclick="U.sel(${i})" onkeydown="if(event.key==='Enter')U.sel(${i})"><td>${r.a.name}<br><span class="mut">${E.SEG[r.a.seg]} · ${r.a.ind}</span></td><td>${M(r.a.arr)}</td><td>${r.a.renew-7*w}d</td><td>${Math.round(r.sc.score)} ${pill(r.sc.band)}</td><td>${r.sc.rs[0]?r.sc.rs[0].label:'None'}</td></tr>`).join('');
+ const r=R[S.sel],a=r.a,g=r.g,dtr=a.renew-7*w;
+ const ev=`<div class="card"><h2>Why is ${a.name} ${r.sc.band.toLowerCase()}?</h2><p class="sub">Score ${Math.round(r.sc.score)} (green from ${C.green}, amber from ${C.amber}), ${E.SEG[a.seg]} weights. ${a.arr>=1e5?M(a.arr):'$'+a.arr.toLocaleString()} ARR, renews in ${dtr} days. Plan: ${a.plan}.</p>
+ ${r.sc.rs.length?r.sc.rs.map(x=>`<p style="margin:6px 0 2px"><b>${x.label}</b> <span class="neg">−${x.loss.toFixed(1)} pts</span><br><span class="mut">${x.txt}</span></p>${meter(x.c)}`).join(''):'<p class="pos">No factor below 75. Nothing is dragging the score.</p>'}
+ <h3>Playbooks triggered</h3>${r.pb.length?r.pb.map(p=>`<p style="margin:3px 0"><span class="chip">${p.pb}</span> ${p.owner}, due ${p.due}<br><span class="mut">${p.why}</span></p>`).join(''):'<p class="mut">None. Standard cadence applies.</p>'}
+ <h3>Draft with AI (bounded)</h3><button class="btn" onclick="U.dr('qbr')">QBR brief</button> <button class="btn" onclick="U.dr('out')">Proactive outreach</button> <button class="btn" onclick="U.dr('rca')">RCA summary</button>
+ ${S.dr?`<textarea id="drt">${E.draft(S.dr,r,w)}</textarea><button class="btn pri" onclick="U.ok()">Approve and send</button> <span class="mut" id="okm">Rules choose who and when. A human edits and approves. The draft uses only the structured fields above.</span>`:''}</div>`;
+ return`<h2>Health and signals</h2><p class="sub">Week ${w} in ${S.mode==='re'?'reactive':'proactive'} mode. Every score is a weighted sum of six factors, and the evidence panel shows which ones cost points. ${cnt('Green')} green · ${cnt('Amber')} amber · ${cnt('Red')} red.</p>
+ <label>Tier <select onchange="U.seg(this.value)">${['All','Enterprise','MidMarket','Growth'].map(s=>`<option value="${s}" ${S.seg===s?'selected':''}>${E.SEG[s]||'All'}</option>`).join('')}</select></label>
+ <div class="two" style="margin-top:10px"><div class="card wrap"><table><tr><th>Account (worst 40 first)</th><th>ARR</th><th>Renews</th><th>Health</th><th>Biggest drag</th></tr>${body}</table></div>${ev}</div>`}
+
+function vOps(){const w=S.w,H=cur().hist,R=H[w],P0=w>0?H[w-1]:null,sr=cur().ser[w],ac=cur().acts[w]||[],dem=cur().demand[w],cap=C.team*C.A.apw;
+ const risk=R.map((r,i)=>({r,i})).filter(x=>x.r.sc.band!=='Green').sort((x,y)=>y.r.a.arr*(100-y.r.sc.score)-x.r.a.arr*(100-x.r.sc.score));
+ const esc=R.filter(r=>r.g.esc>0).sort((x,y)=>y.a.arr-x.a.arr);
+ const chg=P0?R.map((r,i)=>({r,d:r.sc.score-P0[i].sc.score,was:P0[i].sc.band})).filter(x=>Math.abs(x.d)>=6||x.was!==x.r.sc.band).sort((x,y)=>x.d-y.d):[];
+ return`<h2>Weekly operating review · week ${w}, ${E.dueDate(w,0)}</h2><p class="sub">The meeting a Director runs: what is at risk, who owns the next move, whether the team can absorb the work, and what changed. Mode: <b>${S.mode==='re'?'Reactive':'Proactive'}</b>.</p>
+ <div class="row">${kpi(risk.length,'accounts amber or red')}${kpi(M(sr.atRisk),'ARR at risk (red/amber)')}${kpi(sr.esc,'open escalations')}${kpi(ac.length,'playbook actions this week')}${kpi(dem+' vs '+cap,'accounts needing action vs weekly capacity')}</div>
+ ${dem>cap?`<div class="note">Demand exceeds capacity by ${dem-cap}. Proactive mode works the highest ARR-weighted risk first and defers the rest.</div>`:''}
+ <div class="two"><div><h3>At-risk accounts (top 8)</h3><div class="card wrap"><table><tr><th>Account</th><th>ARR</th><th>Renews</th><th>Health</th><th>Why</th></tr>${risk.slice(0,8).map(({r})=>`<tr><td>${r.a.name}</td><td>${M(r.a.arr)}</td><td>${r.a.renew-7*w}d</td><td>${pill(r.sc.band)} ${Math.round(r.sc.score)}</td><td class="mut">${r.sc.rs[0]?r.sc.rs[0].txt:''}</td></tr>`).join('')||'<tr><td>None</td></tr>'}</table></div>
+ <h3>Playbook actions with owners</h3><div class="card wrap"><table><tr><th>Account</th><th>Playbook</th><th>Owner</th><th>Due</th></tr>${ac.slice(0,12).map(x=>`<tr><td>${acc[x.i].name}</td><td><span class="chip">${x.pb}</span></td><td>${x.owner}</td><td>${x.due}</td></tr>`).join('')||`<tr><td colspan=4 class="mut">${w===12?'Quarter closed.':'No actions. In reactive mode nothing happens until a ticket arrives.'}</td></tr>`}</table>${ac.length>12?`<p class="mut">+ ${ac.length-12} more</p>`:''}</div></div>
+ <div><h3>Open escalations</h3><div class="card">${esc.slice(0,6).map(r=>`<p style="margin:3px 0">${r.a.name} <span class="mut">${M(r.a.arr)}, ${E.ownerOf(r.a)}</span></p>`).join('')||'<span class="mut">None</span>'}</div>
+ <h3>Team capacity vs demand</h3><div class="card"><p style="margin:0">Demand ${dem} accounts, capacity ${cap} actions (${C.team} TAMs × ${C.A.apw}).</p>${meter(dem/cap*100)}</div>
+ <h3>What changed since last week</h3><div class="card">${P0?chg.slice(0,8).map(x=>`<p style="margin:3px 0">${x.r.a.name}: <b class="${x.d<0?'neg':'pos'}">${x.d>0?'+':''}${x.d.toFixed(0)}</b> to ${pill(x.r.sc.band)}${x.was!==x.r.sc.band?` <span class="mut">(was ${x.was})</span>`:''}</p>`).join('')||'<span class="mut">No material movement.</span>':'<span class="mut">First week. Nothing to compare yet.</span>'}</div></div></div>`}
+
+function spot(){return acc.filter(a=>a.t&&a.t.type==='pipeline'&&a.renew<=70&&a.seg!=='Growth').sort((x,y)=>y.arr-x.arr)[0]}
+function vSim(){const w=S.w,rr=RE.res,pr=PR.res,sp=spot();const mx=Math.max(...RE.ser.map(s=>s.atRisk),...PR.ser.map(s=>s.atRisk))||1;
+ const pts=(s,k)=>s.ser.slice(0,w+1).map(x=>`${30+x.w*50},${150-x[k]/mx*130}`).join(' ');
+ const chart=`<svg viewBox="0 0 660 175" width="100%" role="img" aria-label="ARR at risk by week, reactive versus proactive"><line x1="30" y1="150" x2="640" y2="150" stroke="var(--line)"/><text x="2" y="24" font-size="10" fill="var(--mut)">${M(mx)}</text>${[0,3,6,9,12].map(k=>`<text x="${26+k*50}" y="168" font-size="10" fill="var(--mut)">wk ${k}</text>`).join('')}<polyline fill="none" stroke="var(--r)" stroke-width="2.5" points="${pts(RE,'atRisk')}"/><polyline fill="none" stroke="var(--g)" stroke-width="2.5" points="${pts(PR,'atRisk')}"/></svg><span style="color:var(--r)">Reactive</span> · <span style="color:var(--g)">Proactive</span> ARR at risk`;
+ const col=(n,X)=>{const s=X.ser[w];return`<div class="card"><h3 style="margin-top:0">${n}</h3><p style="margin:2px 0">ARR at risk <b>${M(s.atRisk)}</b></p><p style="margin:2px 0">Unseen (no one engaged) <b>${M(s.blind)}</b></p><p style="margin:2px 0">Touchpoints so far <b>${s.touch}</b></p><p style="margin:2px 0">Open escalations <b>${s.esc}</b></p></div>`};
+ const tl=(X,n)=>`<div class="card"><h3 style="margin-top:0">${n}</h3>${X.hist.slice(0,w+1).map((rows,k)=>{const r=rows[sp.i],e=X.acts[k].find(x=>x.i===sp.i),p=r.pb.filter(q=>q.pb!=='Expansion').map(q=>q.pb).join(', ');return`<p style="margin:2px 0">wk ${k}: ${pill(r.sc.band)} ${Math.round(r.sc.score)} <span class="mut">${e?'<b>ACTION: '+e.pb+'</b>':p?'rules flag: '+p:''}</span></p>`}).join('')}</div>`;
+ const fin=w===12;const sr=(k,f)=>`<td>${f(rr[k])}</td><td>${f(pr[k])}</td>`;
+ return`<h2>Impact simulation</h2><p class="sub">Same 280 accounts, same hidden problems, same random draws. Only the operating model differs. Press Play for the demo, or use the week slider.</p>
+ <div class="card">${chart}</div><div class="cmp" style="margin-top:14px">${col('Reactive: respond to tickets',RE)}${col('Proactive: playbooks from signals',PR)}</div>
+ <h3>Spotlight: ${sp.name} (${M(sp.arr)}, ${E.SEG[sp.seg]}, pipeline instability, renews week ${Math.ceil(sp.renew/7)})</h3><div class="cmp">${tl(RE,'Reactive')}${tl(PR,'Proactive')}</div>
+ <h3>Outcomes for accounts renewing within 12 weeks ${fin?'':'<span class="mut">(final at week 12)</span>'}</h3>
+ <div class="card wrap"><table><tr><th>Measure</th><th>Reactive</th><th>Proactive</th></tr><tr><td>Cohort ARR</td>${sr('coh',M)}</tr><tr><td>Churned ARR</td>${sr('ch',M)}</tr><tr><td>Gross revenue retention</td>${sr('grr',P)}</tr><tr><td>Net revenue retention</td>${sr('nrr',P)}</tr><tr><td>Pipeline-health coverage <span class="mut">(troubled accounts reached before renewal)</span></td>${sr('cov',P)}</tr><tr><td>Business-review coverage <span class="mut">(renewals with an earlier touch)</span></td>${sr('rvcov',P)}</tr><tr><td>Average lead time before renewal (weeks)</td>${sr('lead',x=>x.toFixed(1))}</tr><tr><td>Proactive touchpoints (12 weeks)</td>${sr('touches',x=>x)}</tr></table>
+ <p class="mut">Input metrics shown are pipeline-health coverage, business-review coverage, touchpoints and lead time. First response time, time to resolution and ticket aging are not simulated here: they need Hevo's ticket data.</p></div>
+ <h3>Assumptions (edit and re-run)</h3><div class="card"><div class="grid3">${[['pReact','Reactive fix rate after ticket'],['pLate','Reactive last-minute save rate'],['pPro','Proactive fix rate per playbook attempt'],['churnBad','Churn if problem unresolved at renewal'],['churnBase','Baseline churn at renewal'],['xRe','Expansion rate, reactive'],['xPro','Expansion rate, proactive'],['apw','Actions per TAM per week']].map(([k,l])=>`<label>${l}<br><input type="number" step="0.01" value="${C.A[k]}" onchange="U.as('${k}',this.value)"></label>`).join('')}</div>
+ <label>Green from <input type="number" value="${C.green}" onchange="U.th('green',this.value)"></label> <label>Amber from <input type="number" value="${C.amber}" onchange="U.th('amber',this.value)"></label></div>
+ <h3>Sensitivity: how much does the gap depend on the assumptions?</h3><div class="card wrap"><table><tr><th>Case</th><th>Reactive GRR</th><th>Proactive GRR</th><th>Gap (pts)</th><th>Churned ARR saved</th></tr>${SENS.map(([n,a,b])=>`<tr><td>${n}</td><td>${P(a.grr)}</td><td>${P(b.grr)}</td><td><b>${((b.grr-a.grr)*100).toFixed(1)}</b></td><td>${M(a.ch-b.ch)}</td></tr>`).join('')}</table>
+ <p class="mut">Conservative lowers proactive fix rate by 35% and raises reactive by 50%. Optimistic does the reverse. Set the proactive fix rate to equal the reactive one and the gap narrows to the effect of earlier timing alone.</p></div>
+ <div class="note"><b>What this does not prove.</b> The generator creates both the signals and the churn risk, so scoring the health model against these labels would be circular. The gap above comes from assumed intervention success rates, not from evidence. <b>First 30 days with Hevo data:</b> (1) backfill 12-24 months of usage, pipeline, ticket and renewal history; (2) test whether the score at T-120/90/60 days separates renewed from churned accounts; (3) re-fit the weights per tier; (4) measure real intervention success from the first playbook cohort and replace these assumptions.</div>`}
+
+function render(){$('nav').innerHTML=TABS.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="U.tab('${k}')">${l}</button>`).join('')+'<button class="btn" onclick="U.story(1)">Demo: 1 Reactive</button><button class="btn" onclick="U.story(2)">2 Proactive</button><button class="btn" onclick="U.story(3)">3 Operating review</button>';
+ $('wkl').textContent=S.w;$('wk').value=S.w;$('mode').value=S.mode;$('play').textContent=S.timer?'Pause':'Play';
+ $('view').innerHTML={port:vPort,health:vHealth,ops:vOps,sim:vSim}[S.tab]()}
+function play(to){clearInterval(S.timer);S.timer=null;if(S.w>=12)S.w=0;S.timer=setInterval(()=>{if(S.w>=12){clearInterval(S.timer);S.timer=null;if(to)to();return render()}S.w++;render()},550);render()}
+window.U={tab:t=>{S.tab=t;S.dr=null;render()},sel:i=>{S.sel=i;S.dr=null;render()},seg:s=>{S.seg=s;S.sel=null;render()},dr:k=>{S.dr=k;render()},ok:()=>{$('okm').textContent='Approved by TAM (simulated). Logged against the account.'},
+ team:v=>{C.team=Math.max(1,+v||1);run();render()},as:(k,v)=>{C.A[k]=+v;run();render()},th:(k,v)=>{C[k]=+v;run();S.sel=null;render()},
+ story:n=>{S.tab=n===3?'ops':'sim';S.dr=null;if(n===3){clearInterval(S.timer);S.timer=null;S.mode='pro';S.w=5;render()}else{S.mode=n===1?'re':'pro';S.w=0;play()}}};
+$('mode').onchange=e=>{S.mode=e.target.value;S.sel=null;render()};$('wk').oninput=e=>{S.w=+e.target.value;render()};$('play').onclick=()=>{if(S.timer){clearInterval(S.timer);S.timer=null;render()}else play()};
+const T=E.tests(),pass=T.filter(x=>x[1]).length;
+$('foot').innerHTML=`<details><summary>Unit tests: ${pass}/${T.length} passing · seed ${C.seed}</summary>${T.map(([n,o])=>`<div>${o?'✓':'✗'} ${n}</div>`).join('')}</details><p>Synthetic data, illustrative thresholds and weights. Rules decide who and when; AI drafts only from structured signals; a human approves. Replace <code>draft()</code> with an LLM call fed only those fields.</p>`;
+run();render();
+})();
+</script></body></html>
